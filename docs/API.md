@@ -65,3 +65,53 @@ Response:
 - 200: returns contact object
 - 402: { "error": "quota_exceeded" }
 - 409: { "error": "quota_not_configured" }
+
+## 4) Telegram Login
+POST `/auth/telegram/login`
+
+Request body:
+```json
+{
+  "id": 123456789,
+  "first_name": "John",
+  "last_name": "Doe",
+  "username": "johndoe",
+  "photo_url": "https://...",
+  "auth_date": 1692100000,
+  "hash": "..."
+}
+```
+
+Response 200:
+```json
+{
+  "success": true,
+  "user_id": 1,
+  "status": "pending"
+}
+```
+
+Sets `hr_auth` cookie with JWT token.
+
+## 5) Get Audit Logs
+GET `/api/audit-logs`
+
+Query params:
+- page (int, default 1)
+- page_size (int, default 20, max 100)
+
+Response 200:
+```json
+{
+  "items": [{
+    "id": 1,
+    "action": "candidate.unlock",
+    "target_type": "candidate",
+    "target_id": "c_abc",
+    "meta": { "quota_before": 19, "quota_after": 18 },
+    "created_at": "2024-02-18T10:30:00Z"
+  }],
+  "page": 1,
+  "page_size": 20
+}
+```

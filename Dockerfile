@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for tg-hr-platform
 
 # Stage 1: Build
-FROM golang:1.22-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
@@ -26,11 +26,7 @@ FROM alpine:3.19
 WORKDIR /app
 
 # Install runtime dependencies
-RUN apk add --no-cache ca-certificates postgresql-client
-
-# Install golang-migrate
-RUN wget -qO- https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate-linux-amd64.tar.gz | tar xvz && \
-    mv migrate /usr/local/bin/
+RUN apk add --no-cache ca-certificates postgresql-client curl
 
 # Copy built binary from builder
 COPY --from=builder /app/server .

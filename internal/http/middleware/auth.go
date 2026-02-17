@@ -1,10 +1,11 @@
 package middleware
 
 import (
-    "net/http"
+	"net/http"
 
-    "github.com/gin-gonic/gin"
-    "tg-hr-platform/internal/domain"
+	"tg-hr-platform/internal/domain"
+
+	"github.com/gin-gonic/gin"
 )
 
 const CtxHRClaimsKey = "hr_claims"

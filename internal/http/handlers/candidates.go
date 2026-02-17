@@ -1,14 +1,15 @@
 package handlers
 
 import (
-    "errors"
-    "net/http"
-    "strconv"
+	"errors"
+	"net/http"
+	"strconv"
 
-    "github.com/gin-gonic/gin"
-    "tg-hr-platform/internal/domain"
-    "tg-hr-platform/internal/http/middleware"
-    "tg-hr-platform/internal/service"
+	"tg-hr-platform/internal/domain"
+	"tg-hr-platform/internal/http/middleware"
+	"tg-hr-platform/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 type AuditSvc interface {

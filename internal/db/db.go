@@ -1,10 +1,10 @@
 package db
 
 import (
-    "context"
+	"context"
 
-    "github.com/jackc/pgx/v5/pgtype"
-    "github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // This project is structured to be compatible with sqlc.
@@ -238,3 +238,128 @@ func (q *Queries) IncrementCompanyQuotaUsed(ctx context.Context, p IncrementComp
 // In this runnable template, we keep it simple by returning a new Queries bound to the same pool;
 // the repo uses pgx tx directly, so WithTx isn't needed here.
 func (q *Queries) WithTx(_ any) *Queries { return q }
+
+// ==================== HR Users ====================
+
+type FindHRUserByTelegramIDRow struct {
+    ID        int64
+    CompanyID int64
+    Status    string
+    Role      string
+}
+
+func (q *Queries) FindHRUserByTelegramID(ctx context.Context, tgUserID int64) (FindHRUserByTelegramIDRow, error) {
+    sql := `SELECT id, company_id, status, role FROM hr_users WHERE tg_user_id = $1 LIMIT 1;`
+    var r FindHRUserByTelegramIDRow
+    err := q.pool.QueryRow(ctx, sql, tgUserID).Scan(&r.ID, &r.CompanyID, &r.Status, &r.Role)
+    return r, err
+}
+
+type GetHRUserByIDRow struct {
+    ID          int64
+    CompanyID   int64
+    Status      string
+    Role        string
+    DisplayName string
+    TgUsername  pgtype.Text
+}
+
+func (q *Queries) GetHRUserByID(ctx context.Context, id int64) (GetHRUserByIDRow, error) {
+    sql := `SELECT id, company_id, status, role, display_name, tg_username FROM hr_users WHERE id = $1 LIMIT 1;`
+    var r GetHRUserByIDRow
+    err := q.pool.QueryRow(ctx, sql, id).Scan(&r.ID, &r.CompanyID, &r.Status, &r.Role, &r.DisplayName, &r.TgUsername)
+    return r, err
+}
+
+type CreateHRUserParams struct {
+    CompanyID   int64
+    TgUserID    int64
+    TgUsername  string
+    DisplayName string
+    Role        string
+    Status      string
+}
+
+func (q *Queries) CreateHRUser(ctx context.Context, p CreateHRUserParams) (int64, error) {
+    sql := `INSERT INTO hr_users (company_id, tg_user_id, tg_username, display_name, role, status)
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;`
+    var id int64
+    err := q.pool.QueryRow(ctx, sql, p.CompanyID, p.TgUserID, p.TgUsername, p.DisplayName, p.Role, p.Status).Scan(&id)
+    return id, err
+}
+
+func (q *Queries) CreateDefaultCompany(ctx context.Context) (int64, error) {
+    sql := `INSERT INTO companies (name, status) VALUES (gen_random_uuid()::text, 'active') RETURNING id;`
+    var id int64
+    err := q.pool.QueryRow(ctx, sql).Scan(&id)
+    return id, err
+}
+
+type UpdateHRUserStatusParams struct {
+    ID     int64
+    Status string
+}
+
+func (q *Queries) UpdateHRUserStatus(ctx context.Context, p UpdateHRUserStatusParams) error {
+    _, err := q.pool.Exec(ctx, `UPDATE hr_users SET status = $2, updated_at = now() WHERE id = $1`, p.ID, p.Status)
+    return err
+}
+
+// ==================== Audit Logs ====================
+
+type InsertAuditLogParams struct {
+    CompanyID  int64
+    HrUserID   int64
+    Action     string
+    TargetType string
+    TargetID   string
+    Meta       []byte // JSON
+}
+
+func (q *Queries) InsertAuditLog(ctx context.Context, p InsertAuditLogParams) error {
+    _, err := q.pool.Exec(ctx,
+        `INSERT INTO audit_logs (company_id, hr_user_id, action, target_type, target_id, meta, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, now())`,
+        p.CompanyID, p.HrUserID, p.Action, p.TargetType, p.TargetID, p.Meta)
+    return err
+}
+
+type GetAuditLogsRow struct {
+    ID         int64
+    CompanyID  int64
+    HrUserID   int64
+    Action     string
+    TargetType string
+    TargetID   string
+    Meta       []byte
+    CreatedAt  pgtype.Timestamptz
+}
+
+type GetAuditLogsParams struct {
+    CompanyID int64
+    Limit     int32
+    Offset    int32
+}
+
+func (q *Queries) GetAuditLogs(ctx context.Context, p GetAuditLogsParams) ([]GetAuditLogsRow, error) {
+    sql := `SELECT id, company_id, hr_user_id, action, target_type, target_id, meta, created_at
+            FROM audit_logs
+            WHERE company_id = $1
+            ORDER BY created_at DESC
+            LIMIT $2 OFFSET $3;`
+    rows, err := q.pool.Query(ctx, sql, p.CompanyID, p.Limit, p.Offset)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    out := make([]GetAuditLogsRow, 0)
+    for rows.Next() {
+        var r GetAuditLogsRow
+        if err := rows.Scan(&r.ID, &r.CompanyID, &r.HrUserID, &r.Action, &r.TargetType, &r.TargetID, &r.Meta, &r.CreatedAt); err != nil {
+            return nil, err
+        }
+        out = append(out, r)
+    }
+    return out, rows.Err()
+}
