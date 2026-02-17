@@ -48,6 +48,7 @@ services:
       REDIS_PASSWORD: ""
       JWT_SECRET: ${JWT_SECRET:-change-me}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001}
       ADDR: :8080
     ports:
       - "8080:8080"

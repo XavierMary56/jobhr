@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -58,18 +59,50 @@ func main() {
     jwtVerifier := auth.NewJWTVerifier(getenv("JWT_SECRET", "dev-secret-change-me"))
     jwtSigner := handlers.NewJWTClaimsSigner(getenv("JWT_SECRET", "dev-secret-change-me"))
     telegramVerifier := auth.NewTelegramVerifier(getenv("TELEGRAM_BOT_TOKEN", ""))
+
+    // 开发模式开关（优先级高于 bot token）
+    devMode := strings.EqualFold(getenv("TELEGRAM_DEV_MODE", ""), "true") || getenv("TELEGRAM_DEV_MODE", "") == "1"
+    if devMode {
+        telegramVerifier.SetDevMode(true)
+        log.Println("⚠️  WARNING: Telegram verification is DISABLED (TELEGRAM_DEV_MODE=true)")
+    } else if getenv("TELEGRAM_BOT_TOKEN", "") == "" {
+        log.Println("⚠️  WARNING: TELEGRAM_BOT_TOKEN is empty; set TELEGRAM_DEV_MODE=true for local testing")
+    }
+    
     authMw := &middleware.AuthMiddleware{JWT: jwtVerifier}
 
     r := gin.New()
     r.Use(gin.Recovery())
     r.Use(gin.Logger())
+    
+    // CORS middleware
+    allowedOrigins := getAllowedOrigins()
+    r.Use(func(c *gin.Context) {
+        origin := c.Request.Header.Get("Origin")
+        
+        // 检查请求的 origin 是否在允许列表中
+        if origin != "" && isAllowedOrigin(origin, allowedOrigins) {
+            c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+            c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+            c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, Cookie")
+            c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+        }
+
+        if c.Request.Method == "OPTIONS" {
+            c.AbortWithStatus(204)
+            return
+        }
+
+        c.Next()
+    })
 
     r.GET("/healthz", func(c *gin.Context) {
         c.JSON(http.StatusOK, gin.H{"ok": true, "ts": time.Now().UTC()})
     })
 
     // Public auth endpoints
-    authHandler := handlers.NewAuthHandler(telegramVerifier, jwtSigner, hrUserRepo)
+    cookieSecure := strings.EqualFold(getenv("COOKIE_SECURE", "false"), "true") || getenv("COOKIE_SECURE", "") == "1"
+    authHandler := handlers.NewAuthHandler(telegramVerifier, jwtSigner, hrUserRepo, cookieSecure)
     r.POST("/auth/telegram/login", authHandler.TelegramLogin)
 
     // Protected API endpoints
@@ -97,4 +130,28 @@ func getenv(k, def string) string {
         return def
     }
     return v
+}
+
+// getAllowedOrigins 从环境变量获取允许的源列表
+// 支持多个源（逗号分隔），例如：ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,https://example.com
+func getAllowedOrigins() []string {
+    originsStr := getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001")
+    origins := strings.Split(originsStr, ",")
+    
+    // 去除空格
+    for i, origin := range origins {
+        origins[i] = strings.TrimSpace(origin)
+    }
+    
+    return origins
+}
+
+// isAllowedOrigin 检查 origin 是否在允许列表中
+func isAllowedOrigin(origin string, allowedOrigins []string) bool {
+    for _, allowed := range allowedOrigins {
+        if origin == allowed {
+            return true
+        }
+    }
+    return false
 }

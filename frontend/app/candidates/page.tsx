@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { toast } from 'react-toastify'
+import { toast } from '@/lib/toast'
 import { candidateAPI, CandidateListParams, Candidate } from '@/lib/api'
 import { useAuthStore } from '@/lib/store'
 import Header from '@/components/Header'
@@ -12,7 +12,7 @@ import FilterBar from '@/components/FilterBar'
 
 export default function CandidatesPage() {
   const router = useRouter()
-  const user = useAuthStore((state) => state.user)
+  const { user } = useAuthStore()
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(false)
   const [filters, setFilters] = useState<CandidateListParams>({

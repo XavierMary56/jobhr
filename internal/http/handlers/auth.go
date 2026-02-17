@@ -14,6 +14,7 @@ type AuthHandler struct {
 	telegramVerifier *auth.TelegramVerifier
 	jwtSigner        JWTSigner
 	userRepo         HRUserRepository
+	cookieSecure     bool
 }
 
 type JWTSigner interface {
@@ -25,11 +26,12 @@ type HRUserRepository interface {
 	GetOrCreateHRUserByTelegramID(userID int64, username, displayName string) (hrUserID, companyID int64, status string, err error)
 }
 
-func NewAuthHandler(telegramVerifier *auth.TelegramVerifier, jwtSigner JWTSigner, userRepo HRUserRepository) *AuthHandler {
+func NewAuthHandler(telegramVerifier *auth.TelegramVerifier, jwtSigner JWTSigner, userRepo HRUserRepository, cookieSecure bool) *AuthHandler {
 	return &AuthHandler{
 		telegramVerifier: telegramVerifier,
 		jwtSigner:        jwtSigner,
 		userRepo:         userRepo,
+		cookieSecure:     cookieSecure,
 	}
 }
 
@@ -81,9 +83,9 @@ func (h *AuthHandler) TelegramLogin(c *gin.Context) {
 		tokenStr,
 		24*3600, // 24 hours
 		"/",
-		"",    // domain: empty for current domain
-		true,  // secure (HTTPS only in production)
-		true,  // httponly
+		"",             // domain: empty for current domain
+		h.cookieSecure, // secure (HTTPS only in production)
+		true,           // httponly
 	)
 
 	c.JSON(http.StatusOK, gin.H{

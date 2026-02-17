@@ -6,8 +6,7 @@ import { useAuthStore } from '@/lib/store'
 
 export default function Header() {
   const router = useRouter()
-  const user = useAuthStore((state) => state.user)
-  const logout = useAuthStore((state) => state.logout)
+  const { user, logout } = useAuthStore()
 
   const handleLogout = () => {
     logout()

@@ -1,0 +1,27 @@
+# Frontend files (not needed in backend build)
+frontend/node_modules
+frontend/.next
+frontend/out
+frontend/.turbo
+
+# Git
+.git
+.gitignore
+
+# Development files
+*.md
+.env
+.env.local
+.vscode
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+tmp/
+dist/
+
+# Documentation
+docs/
+README.md

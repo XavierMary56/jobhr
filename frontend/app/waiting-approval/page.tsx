@@ -5,7 +5,7 @@ import { useAuthStore } from '@/lib/store'
 
 export default function WaitingApprovalPage() {
   const router = useRouter()
-  const user = useAuthStore((state) => state.user)
+  const { user, logout } = useAuthStore()
 
   if (user?.status === 'active') {
     router.push('/candidates')
@@ -24,7 +24,7 @@ export default function WaitingApprovalPage() {
           请稍候，我们会尽快处理你的申请。
         </p>
         <button
-          onClick={() => useAuthStore.getState().logout()}
+          onClick={logout}
           className="btn-secondary w-full"
         >
           返回登录

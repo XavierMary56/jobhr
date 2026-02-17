@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { toast } from 'react-toastify'
+import { toast } from '@/lib/toast'
 import { candidateAPI, CandidateDetail } from '@/lib/api'
 import { useAuthStore } from '@/lib/store'
 import Header from '@/components/Header'
 
 export default function CandidateDetailPage({ params }: { params: { slug: string } }) {
   const router = useRouter()
-  const user = useAuthStore((state) => state.user)
+  const { user } = useAuthStore()
   const [candidate, setCandidate] = useState<CandidateDetail | null>(null)
   const [loading, setLoading] = useState(false)
   const [unlocking, setUnlocking] = useState(false)

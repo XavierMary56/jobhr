@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast } from 'react-toastify'
+import { toast } from '@/lib/toast'
 import { auditAPI, AuditLog } from '@/lib/api'
 import { useAuthStore } from '@/lib/store'
 import Header from '@/components/Header'
 
 export default function AuditLogsPage() {
   const router = useRouter()
-  const user = useAuthStore((state) => state.user)
+  const { user } = useAuthStore()
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)

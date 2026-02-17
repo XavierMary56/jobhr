@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -27,16 +28,38 @@ type TelegramAuthData struct {
 
 type TelegramVerifier struct {
 	botToken string
+	devMode  bool // 开发模式：跳过签名验证
 }
 
 func NewTelegramVerifier(botToken string) *TelegramVerifier {
-	return &TelegramVerifier{botToken: botToken}
+	// 如果没有配置 bot token，自动启用开发模式
+	devMode := botToken == ""
+	if devMode {
+		log.Println("⚠️  Telegram verification: DEV MODE enabled (no bot token)")
+	}
+	return &TelegramVerifier{
+		botToken: botToken,
+		devMode:  devMode,
+	}
+}
+
+// SetDevMode 设置开发模式（用于测试）
+func (v *TelegramVerifier) SetDevMode(enabled bool) {
+	v.devMode = enabled
 }
 
 // VerifyAuthData verifies Telegram login widget authenticity
 // This implements Telegram bot API's Widget verification method
 // See: https://core.telegram.org/widgets/login
 func (v *TelegramVerifier) VerifyAuthData(data *TelegramAuthData) error {
+	// 开发模式：跳过验证
+	if v.devMode {
+		log.Println("✅ DEV MODE: Skipping Telegram auth verification")
+		return nil
+	}
+	
+	log.Println("🔒 PRODUCTION MODE: Verifying Telegram auth data")
+	
 	// 1. Check timestamp (data must be within 1 hour)
 	now := time.Now().Unix()
 	if now-data.AuthDate > 3600 {

@@ -30,7 +30,7 @@ declare global {
 
 export default function LoginPage() {
   const router = useRouter()
-  const setUser = useAuthStore((state) => state.setUser)
+  const { setUser } = useAuthStore()
   const isInitialized = useRef(false)
 
   useEffect(() => {
@@ -92,6 +92,30 @@ export default function LoginPage() {
     }
   }
 
+  const handleTestLogin = async () => {
+    // 测试模式：模拟 Telegram 登录数据
+    console.log('API Base URL:', process.env.NEXT_PUBLIC_API_URL)
+    
+    const testTelegramData = {
+      user: {
+        id: 123456789,
+        first_name: 'Test',
+        last_name: 'User',
+        username: 'testuser',
+        photo_url: '',
+      },
+      auth_date: Math.floor(Date.now() / 1000),
+    }
+    
+    console.log('开始测试登录...', testTelegramData)
+    
+    try {
+      await handleTelegramLogin(testTelegramData)
+    } catch (error) {
+      console.error('登录错误:', error)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
       <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
@@ -108,11 +132,34 @@ export default function LoginPage() {
           </div>
 
           <button
-            onClick={() => window.Telegram?.WebApp?.close()}
+            onClick={() => {
+              console.log('按钮被点击了')
+              if (window.Telegram?.WebApp) {
+                console.log('在 Telegram 中运行')
+                window.Telegram.WebApp.close()
+              } else {
+                console.log('不在 Telegram 中，显示提示')
+                toast.info('请在 Telegram 中打开此链接')
+              }
+            }}
             className="btn-primary w-full"
           >
             📱 使用 Telegram 登录
           </button>
+
+          {/* 开发测试按钮 */}
+          <button
+            onClick={handleTestLogin}
+            className="btn-secondary w-full text-sm"
+          >
+            🧪 测试模式登录（开发用）
+          </button>
+
+          {/* 调试信息 */}
+          <div className="mt-4 p-3 bg-gray-100 rounded text-xs text-gray-600">
+            <div><strong>API URL:</strong> {process.env.NEXT_PUBLIC_API_URL || '未配置'}</div>
+            <div><strong>登录端点:</strong> POST /auth/telegram/login</div>
+          </div>
 
           <p className="text-xs text-center text-gray-500 mt-4">
             在 Telegram 中打开此链接以登录
