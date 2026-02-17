@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: tg-hr-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tg_hr
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/migrations
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tg-hr-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: tg-hr-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tg-hr-network
+
+  # Migration Service
+  migrate:
+    image: migrate/migrate
+    container_name: tg-hr-migrate
+    volumes:
+      - ./migrations:/migrations
+    command: -path /migrations -database "postgres://postgres:postgres@db:5432/tg_hr?sslmode=disable" up
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - tg-hr-network
+
+  # Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tg-hr-app
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/tg_hr?sslmode=disable
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ""
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+      ADDR: :8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - tg-hr-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  tg-hr-network:
+    driver: bridge
