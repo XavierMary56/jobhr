@@ -20,8 +20,8 @@ export default function WaitingApprovalPage() {
           账户待审批
         </h1>
         <p className="text-gray-600 mb-6">
-          你的账户已创建，但需要管理员审核后才能使用。
-          请稍候，我们会尽快处理你的申请。
+          当前系统默认自动审核。
+          如果你看到此页，说明你的账号被设置为待审核状态。
         </p>
         <button
           onClick={logout}

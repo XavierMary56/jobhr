@@ -6,6 +6,7 @@ import { toast } from '@/lib/toast'
 import { auditAPI, AuditLog } from '@/lib/api'
 import { useAuthStore } from '@/lib/store'
 import Header from '@/components/Header'
+import { EmptyState, LoadingState } from '@/components/State'
 
 export default function AuditLogsPage() {
   const router = useRouter()
@@ -59,14 +60,14 @@ export default function AuditLogsPage() {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin">⏳</div>
-            <p className="mt-4 text-gray-600">加载中...</p>
-          </div>
+          <LoadingState title="加载中..." description="正在获取审计日志" illustration="audit" />
         ) : logs.length === 0 ? (
-          <div className="card text-center py-12">
-            <p className="text-gray-600">暂无操作记录</p>
-          </div>
+          <EmptyState
+            icon="🧾"
+            illustration="audit"
+            title="暂无操作记录"
+            description="你还没有任何操作记录"
+          />
         ) : (
           <>
             <div className="overflow-x-auto">

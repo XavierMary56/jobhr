@@ -9,6 +9,11 @@ export const API_CONFIG = {
   TIMEOUT: 10000, // 请求超时时间（毫秒）
 } as const
 
+// 支持联系方式
+export const SUPPORT_CONFIG = {
+  EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@example.com',
+} as const
+
 // 英语水平选项
 export const ENGLISH_LEVELS = [
   { value: '', label: '所有' },

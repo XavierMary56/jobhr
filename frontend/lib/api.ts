@@ -43,7 +43,17 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('hr_auth')
-        window.location.href = '/'
+        window.location.href = '/unauthorized'
+      }
+    }
+    if (error.response?.status === 403) {
+      if (typeof window !== 'undefined') {
+        const code = error.response?.data?.error
+        if (code === 'pending_approval') {
+          window.location.href = '/waiting-approval'
+        } else {
+          window.location.href = '/forbidden'
+        }
       }
     }
     return Promise.reject(error)
@@ -157,6 +167,33 @@ export interface AuditLogResponse {
   total: number                 // 总记录数
 }
 
+/**
+ * 当前账号信息接口
+ */
+export interface MeResponse {
+  user: {
+    id: number
+    company_id: number
+    status: string
+    role: string
+    display_name: string
+    tg_username: string
+  }
+  company: {
+    id: number
+    name: string
+    status: string
+  }
+  quota: {
+    configured: boolean
+    unlock_quota_total: number
+    unlock_quota_used: number
+    unlock_quota_remaining: number
+    period_start: string
+    period_end: string
+  }
+}
+
 // ==================== API 方法 ====================
 
 /**
@@ -223,6 +260,19 @@ export const auditAPI = {
     const response = await apiClient.get('/api/audit-logs', {
       params: { page, page_size },
     })
+    return response.data
+  },
+}
+
+/**
+ * 账号相关 API
+ */
+export const accountAPI = {
+  /**
+   * 获取当前账号信息
+   */
+  getMe: async (): Promise<MeResponse> => {
+    const response = await apiClient.get('/api/me')
     return response.data
   },
 }

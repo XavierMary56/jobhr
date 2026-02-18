@@ -1,16 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
 
 export default function Header() {
-  const router = useRouter()
   const { user, logout } = useAuthStore()
 
   const handleLogout = () => {
     logout()
-    router.push('/')
   }
 
   return (
@@ -21,6 +18,12 @@ export default function Header() {
         </Link>
 
         <nav className="flex items-center gap-6">
+          <Link
+            href="/account"
+            className="text-gray-600 hover:text-gray-900 font-medium"
+          >
+            账号资料
+          </Link>
           <Link
             href="/candidates"
             className="text-gray-600 hover:text-gray-900 font-medium"

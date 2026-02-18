@@ -12,6 +12,9 @@ import (
 type HRUserRepo struct {
 	Q    *db.Queries
 	Pool any // *pgxpool.Pool, but not imported here to avoid circular dependency
+	// DefaultStatus controls new HR user status when auto-creating accounts.
+	// Expected values: "active" or "pending".
+	DefaultStatus string
 }
 
 // GetOrCreateHRUserByTelegramID finds or creates an HR user linked to a Telegram account
@@ -35,19 +38,27 @@ func (r *HRUserRepo) GetOrCreateHRUserByTelegramID(userID int64, username, displ
 	if err != nil {
 		return 0, 0, "", err
 	}
+	if err := q.CreateCompanyQuotaIfNotExists(ctx, companyID); err != nil {
+		return 0, 0, "", err
+	}
 
-	// Create HR user with pending status
+	status = r.DefaultStatus
+	if status == "" {
+		status = "pending"
+	}
+
+	// Create HR user with configured default status
 	hrUserID, err = q.CreateHRUser(ctx, db.CreateHRUserParams{
 		CompanyID:   companyID,
 		TgUserID:    userID,
 		TgUsername:  username,
 		DisplayName: displayName,
 		Role:        "recruiter",
-		Status:      "pending", // New users start as pending
+		Status:      status,
 	})
 	if err != nil {
 		return 0, 0, "", err
 	}
 
-	return hrUserID, companyID, "pending", nil
+	return hrUserID, companyID, status, nil
 }

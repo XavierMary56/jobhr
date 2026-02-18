@@ -9,6 +9,7 @@ import { useAuthStore } from '@/lib/store'
 import Header from '@/components/Header'
 import CandidateCard from '@/components/CandidateCard'
 import FilterBar from '@/components/FilterBar'
+import { EmptyState, LoadingState } from '@/components/State'
 
 export default function CandidatesPage() {
   const router = useRouter()
@@ -61,20 +62,22 @@ export default function CandidatesPage() {
         <FilterBar onFilterChange={handleFilterChange} />
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin">⏳</div>
-            <p className="mt-4 text-gray-600">加载中...</p>
-          </div>
+          <LoadingState title="加载中..." description="正在获取候选人列表" illustration="list" />
         ) : candidates.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600 mb-4">未找到匹配的候选人</p>
-            <button
-              onClick={() => setFilters({ page: 1, page_size: 20 })}
-              className="btn-secondary"
-            >
-              清除筛选
-            </button>
-          </div>
+          <EmptyState
+            icon="🔎"
+            illustration="list"
+            title="未找到匹配的候选人"
+            description="尝试调整筛选条件或清除筛选"
+            actions={
+              <button
+                onClick={() => setFilters({ page: 1, page_size: 20 })}
+                className="btn-secondary"
+              >
+                清除筛选
+              </button>
+            }
+          />
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {candidates.map((candidate) => (

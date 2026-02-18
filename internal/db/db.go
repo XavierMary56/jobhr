@@ -213,6 +213,20 @@ type CompanyQuotaRow struct {
     UnlockQuotaUsed  int32
 }
 
+type CompanyRow struct {
+    ID     int64
+    Name   string
+    Status string
+}
+
+type CompanyQuotaDetailRow struct {
+    CompanyID        int64
+    UnlockQuotaTotal int32
+    UnlockQuotaUsed  int32
+    PeriodStart      pgtype.Date
+    PeriodEnd        pgtype.Date
+}
+
 func (q *Queries) LockCompanyQuota(ctx context.Context, companyID int64) (CompanyQuotaRow, error) {
     sql := `
 SELECT company_id, unlock_quota_total, unlock_quota_used
@@ -221,6 +235,26 @@ WHERE company_id=$1
 FOR UPDATE;`
     var r CompanyQuotaRow
     err := q.pool.QueryRow(ctx, sql, companyID).Scan(&r.CompanyID, &r.UnlockQuotaTotal, &r.UnlockQuotaUsed)
+    return r, err
+}
+
+func (q *Queries) GetCompanyByID(ctx context.Context, companyID int64) (CompanyRow, error) {
+    sql := `SELECT id, name, status FROM companies WHERE id = $1 LIMIT 1;`
+    var r CompanyRow
+    err := q.pool.QueryRow(ctx, sql, companyID).Scan(&r.ID, &r.Name, &r.Status)
+    return r, err
+}
+
+func (q *Queries) GetCompanyQuotaDetail(ctx context.Context, companyID int64) (CompanyQuotaDetailRow, error) {
+    sql := `
+SELECT company_id, unlock_quota_total, unlock_quota_used, period_start, period_end
+FROM company_quotas
+WHERE company_id = $1
+LIMIT 1;`
+    var r CompanyQuotaDetailRow
+    err := q.pool.QueryRow(ctx, sql, companyID).Scan(
+        &r.CompanyID, &r.UnlockQuotaTotal, &r.UnlockQuotaUsed, &r.PeriodStart, &r.PeriodEnd,
+    )
     return r, err
 }
 
@@ -293,6 +327,14 @@ func (q *Queries) CreateDefaultCompany(ctx context.Context) (int64, error) {
     var id int64
     err := q.pool.QueryRow(ctx, sql).Scan(&id)
     return id, err
+}
+
+func (q *Queries) CreateCompanyQuotaIfNotExists(ctx context.Context, companyID int64) error {
+    _, err := q.pool.Exec(ctx, `
+INSERT INTO company_quotas (company_id)
+VALUES ($1)
+ON CONFLICT (company_id) DO NOTHING;`, companyID)
+    return err
 }
 
 type UpdateHRUserStatusParams struct {

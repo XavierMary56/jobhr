@@ -33,3 +33,35 @@ body {
 .input-field {
   @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500;
 }
+
+.state {
+  @apply text-center py-12;
+}
+
+.state-card {
+  @apply card text-center py-12;
+}
+
+.state-icon {
+  @apply inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 text-gray-600 text-xl;
+}
+
+.state-title {
+  @apply mt-4 text-lg font-semibold text-gray-900;
+}
+
+.state-desc {
+  @apply mt-2 text-gray-600;
+}
+
+.state-actions {
+  @apply mt-6 flex flex-wrap justify-center gap-3;
+}
+
+.spinner {
+  @apply inline-block w-8 h-8 rounded-full border-2 border-gray-300 border-t-blue-500 animate-spin;
+}
+
+.state-illustration {
+  @apply mx-auto mb-2 h-20 w-auto;
+}

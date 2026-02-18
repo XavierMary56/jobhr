@@ -115,3 +115,33 @@ Response 200:
   "page_size": 20
 }
 ```
+
+## 6) Get Current Account Info
+GET `/api/me`
+
+Response 200:
+```json
+{
+  "user": {
+    "id": 1,
+    "company_id": 1,
+    "status": "active",
+    "role": "recruiter",
+    "display_name": "Alice",
+    "tg_username": "alice"
+  },
+  "company": {
+    "id": 1,
+    "name": "Acme Inc",
+    "status": "active"
+  },
+  "quota": {
+    "configured": true,
+    "unlock_quota_total": 20,
+    "unlock_quota_used": 3,
+    "unlock_quota_remaining": 17,
+    "period_start": "2026-02-01",
+    "period_end": "2026-03-02"
+  }
+}
+```

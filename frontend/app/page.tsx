@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from '@/lib/toast'
 import { authAPI, TelegramAuthData } from '@/lib/api'
@@ -25,6 +25,7 @@ declare global {
         close: () => void
       }
     }
+    onTelegramAuth?: (user: any) => void
   }
 }
 
@@ -32,38 +33,46 @@ export default function LoginPage() {
   const router = useRouter()
   const { setUser } = useAuthStore()
   const isInitialized = useRef(false)
+  const [isWebApp, setIsWebApp] = useState(false)
+  const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
 
   useEffect(() => {
     if (isInitialized.current) return
     isInitialized.current = true
+    const webAppAvailable = Boolean(window.Telegram?.WebApp)
+    setIsWebApp(webAppAvailable)
 
-    // Load Telegram Web App Script
-    const script = document.createElement('script')
-    script.src = 'https://telegram.org/js/telegram-web-app.js'
-    document.body.appendChild(script)
-
-    script.onload = () => {
-      if (window.Telegram?.WebApp) {
-        window.Telegram.WebApp.ready()
-        const initData = window.Telegram.WebApp.initDataUnsafe
-        if (initData?.user) {
-          handleTelegramLogin(initData)
-        }
+    if (webAppAvailable) {
+      window.Telegram?.WebApp?.ready()
+      const initData = window.Telegram?.WebApp?.initDataUnsafe
+      if (initData?.user) {
+        handleTelegramLogin(initData)
       }
     }
   }, [])
 
   const handleTelegramLogin = async (telegramData: any) => {
     try {
-      const authData: TelegramAuthData = {
-        id: telegramData.user.id,
-        first_name: telegramData.user.first_name,
-        last_name: telegramData.user.last_name || '',
-        username: telegramData.user.username || '',
-        photo_url: telegramData.user.photo_url || '',
-        auth_date: telegramData.auth_date,
-        hash: window.Telegram?.WebApp?.initData?.split('hash=')[1] || '',
-      }
+      const isWebAppData = Boolean(telegramData?.user)
+      const authData: TelegramAuthData = isWebAppData
+        ? {
+            id: telegramData.user.id,
+            first_name: telegramData.user.first_name,
+            last_name: telegramData.user.last_name || '',
+            username: telegramData.user.username || '',
+            photo_url: telegramData.user.photo_url || '',
+            auth_date: telegramData.auth_date,
+            hash: window.Telegram?.WebApp?.initData?.split('hash=')[1] || '',
+          }
+        : {
+            id: telegramData.id,
+            first_name: telegramData.first_name,
+            last_name: telegramData.last_name || '',
+            username: telegramData.username || '',
+            photo_url: telegramData.photo_url || '',
+            auth_date: telegramData.auth_date,
+            hash: telegramData.hash || '',
+          }
 
       const response = await authAPI.telegramLogin(authData)
 
@@ -92,28 +101,12 @@ export default function LoginPage() {
     }
   }
 
-  const handleTestLogin = async () => {
-    // 测试模式：模拟 Telegram 登录数据
-    console.log('API Base URL:', process.env.NEXT_PUBLIC_API_URL)
-    
-    const testTelegramData = {
-      user: {
-        id: 123456789,
-        first_name: 'Test',
-        last_name: 'User',
-        username: 'testuser',
-        photo_url: '',
-      },
-      auth_date: Math.floor(Date.now() / 1000),
+  const handleLoginClick = async () => {
+    if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+      await handleTelegramLogin(window.Telegram.WebApp.initDataUnsafe)
+      return
     }
-    
-    console.log('开始测试登录...', testTelegramData)
-    
-    try {
-      await handleTelegramLogin(testTelegramData)
-    } catch (error) {
-      console.error('登录错误:', error)
-    }
+    toast.info('请在 Telegram 中打开此链接')
   }
 
   return (
@@ -132,37 +125,23 @@ export default function LoginPage() {
           </div>
 
           <button
-            onClick={() => {
-              console.log('按钮被点击了')
-              if (window.Telegram?.WebApp) {
-                console.log('在 Telegram 中运行')
-                window.Telegram.WebApp.close()
-              } else {
-                console.log('不在 Telegram 中，显示提示')
-                toast.info('请在 Telegram 中打开此链接')
-              }
-            }}
+            onClick={handleLoginClick}
             className="btn-primary w-full"
           >
-            📱 使用 Telegram 登录
+            使用 Telegram 登录
           </button>
 
-          {/* 开发测试按钮 */}
-          <button
-            onClick={handleTestLogin}
-            className="btn-secondary w-full text-sm"
-          >
-            🧪 测试模式登录（开发用）
-          </button>
-
-          {/* 调试信息 */}
-          <div className="mt-4 p-3 bg-gray-100 rounded text-xs text-gray-600">
-            <div><strong>API URL:</strong> {process.env.NEXT_PUBLIC_API_URL || '未配置'}</div>
-            <div><strong>登录端点:</strong> POST /auth/telegram/login</div>
-          </div>
+          {!isWebApp && botUsername && (
+            <a
+              href={`https://t.me/${botUsername}`}
+              className="btn-secondary w-full text-center"
+            >
+              打开 Telegram 机器人
+            </a>
+          )}
 
           <p className="text-xs text-center text-gray-500 mt-4">
-            在 Telegram 中打开此链接以登录
+            请在 Telegram 中打开此链接以登录
           </p>
         </div>
       </div>

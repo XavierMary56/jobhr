@@ -7,6 +7,7 @@ import { toast } from '@/lib/toast'
 import { candidateAPI, CandidateDetail } from '@/lib/api'
 import { useAuthStore } from '@/lib/store'
 import Header from '@/components/Header'
+import { EmptyState, LoadingState } from '@/components/State'
 
 export default function CandidateDetailPage({ params }: { params: { slug: string } }) {
   const router = useRouter()
@@ -49,9 +50,9 @@ export default function CandidateDetailPage({ params }: { params: { slug: string
       toast.success('已解锁联系方式！')
     } catch (error: any) {
       if (error.response?.status === 402) {
-        toast.error('配额不足，请联系管理员')
+        router.push(`/quota?reason=exceeded&return=/candidates/${params.slug}`)
       } else if (error.response?.status === 409) {
-        toast.error('配额未配置')
+        router.push(`/quota?reason=not_configured&return=/candidates/${params.slug}`)
       } else {
         toast.error(error.response?.data?.error || '解锁失败')
       }
@@ -64,9 +65,8 @@ export default function CandidateDetailPage({ params }: { params: { slug: string
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="container py-12 text-center">
-          <div className="inline-block animate-spin">⏳</div>
-          <p className="mt-4 text-gray-600">加载中...</p>
+        <div className="container py-12">
+          <LoadingState title="加载中..." description="正在获取候选人详情" illustration="profile" />
         </div>
       </div>
     )
@@ -76,11 +76,18 @@ export default function CandidateDetailPage({ params }: { params: { slug: string
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="container py-12 text-center">
-          <p className="text-gray-600 mb-4">候选人不存在</p>
-          <Link href="/candidates" className="btn-primary">
-            返回列表
-          </Link>
+        <div className="container py-12">
+          <EmptyState
+            icon="📄"
+            illustration="profile"
+            title="候选人不存在"
+            description="该候选人可能已被删除或不可见"
+            actions={
+              <Link href="/candidates" className="btn-primary">
+                返回列表
+              </Link>
+            }
+          />
         </div>
       </div>
     )

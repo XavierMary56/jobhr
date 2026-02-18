@@ -1,28 +1,56 @@
 # ====================
-# 前端 Dockerfile
-# 使用单阶段构建以简化开发流程
+# 前端 Dockerfile - 生产版本
+# 使用多阶段构建优化镜像大小
 # ====================
 
-FROM node:20-alpine
+# Build stage
+FROM node:20-alpine AS builder
 
-# 设置工作目录
 WORKDIR /app
 
 # 复制 package 文件
 COPY package*.json ./
 
-# 安装依赖（使用 legacy-peer-deps 避免版本冲突）
-RUN npm install --legacy-peer-deps
+# 安装依赖
+RUN npm ci
 
 # 复制所有源代码
 COPY . .
 
-# 环境变量配置
-ENV NODE_ENV=development
-ENV NEXT_PUBLIC_API_URL=http://app:8080
+# 构建 Next.js 应用
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
 
-# 暴露端口
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=$NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
+
+RUN npm run build
+
+# Final stage - 生产运行时
+FROM node:20-alpine
+
+WORKDIR /app
+
+# 安装 dumb-init 处理信号，以及 curl 用于健康检查
+RUN apk add --no-cache dumb-init curl
+
+# 复制 package 文件
+COPY package*.json ./
+
+# 仅安装生产依赖
+RUN npm ci --only=production
+
+# 从构建阶段复制已构建的应用
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+
 EXPOSE 3000
 
-# 启动开发服务器（支持热重载）
-CMD ["npm", "run", "dev"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000 || exit 1
+
+# 使用 dumb-init 处理信号
+ENTRYPOINT ["dumb-init", "--"]
+
+# 生产模式启动 Next.js
+CMD ["npm", "start"]

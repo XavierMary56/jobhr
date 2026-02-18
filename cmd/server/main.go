@@ -53,7 +53,8 @@ func main() {
     candCache := &cache.CandidateCache{RDB: rdb}
     candSvc := &service.CandidateService{Repo: candRepo, Cache: candCache}
 
-    hrUserRepo := &repo.HRUserRepo{Q: queries, Pool: pool}
+    hrDefaultStatus := getenv("HR_DEFAULT_STATUS", "active")
+    hrUserRepo := &repo.HRUserRepo{Q: queries, Pool: pool, DefaultStatus: hrDefaultStatus}
     auditSvc := &service.AuditLogService{Q: queries}
 
     jwtVerifier := auth.NewJWTVerifier(getenv("JWT_SECRET", "dev-secret-change-me"))
@@ -100,14 +101,30 @@ func main() {
         c.JSON(http.StatusOK, gin.H{"ok": true, "ts": time.Now().UTC()})
     })
 
+    // Telegram Bot webhook
+    botToken := getenv("TELEGRAM_BOT_TOKEN", "")
+    webAppURL := getenv("BOT_WEBAPP_URL", "http://localhost:3000")
+    webhookSecret := getenv("TELEGRAM_WEBHOOK_SECRET", "")
+    if botToken != "" {
+        botHandler := handlers.NewBotHandler(botToken, webAppURL, webhookSecret)
+        r.POST("/bot/webhook", botHandler.HandleWebhook)
+        log.Printf("✅ Bot webhook registered at POST /bot/webhook")
+        log.Printf("📍 WebApp URL: %s", webAppURL)
+    } else {
+        log.Println("⚠️  TELEGRAM_BOT_TOKEN is empty, bot webhook is disabled")
+    }
+
     // Public auth endpoints
     cookieSecure := strings.EqualFold(getenv("COOKIE_SECURE", "false"), "true") || getenv("COOKIE_SECURE", "") == "1"
-    authHandler := handlers.NewAuthHandler(telegramVerifier, jwtSigner, hrUserRepo, cookieSecure)
+        authHandler := handlers.NewAuthHandler(telegramVerifier, jwtSigner, hrUserRepo, cookieSecure)
     r.POST("/auth/telegram/login", authHandler.TelegramLogin)
 
     // Protected API endpoints
     api := r.Group("/api")
     api.Use(authMw.Auth(), authMw.AuthActiveHR())
+    
+        accountH := handlers.NewAccountHandler(queries)
+        api.GET("/me", accountH.GetMe)
 
     candH := &handlers.CandidateHandler{Svc: candSvc, Audit: auditSvc}
     api.GET("/candidates", candH.List)

@@ -26,6 +26,12 @@ class SimpleAuthStore {
   logout() {
     this.user = null
     this.notify()
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('hr_auth')
+      // Best-effort cookie cleanup (HttpOnly cookies cannot be cleared from JS)
+      document.cookie = 'hr_auth=; Max-Age=0; path=/'
+      window.location.href = '/unauthorized'
+    }
   }
 
   isLoggedIn(): boolean {
